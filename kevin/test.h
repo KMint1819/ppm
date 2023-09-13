@@ -1,85 +1,90 @@
 #pragma once
 
+#include <any>
 #include <iostream>
+#include <optional>
+#include <variant>
+#include <vector>
 
-namespace Number
+namespace Kevin
 {
-#define NUMBER_OF_ITEMS_A_NORMAL_SHELF_CAN_HOLD 4
+const int NUMBER_OF_ITEMS_A_NORMAL_SHELF_CAN_HOLD = 4;
 
-    class Container
+class Container
+{
+  public:
+    using Type = std::variant<int, float, double>;
+
+    template <typename T> Container(T value = 0) : m_Content(value)
     {
-    public:
+    }
 
-        Container(float value = 0) : m_Contents(value) {}
-
-        float &GetContents()
-        {
-            return &m_Contents;
-        }
-
-        virtual void SetContents(float value) { m_Contents = value; }
-
-    private:
-        float m_Contents;
-    };
-
-    class IntegerContainer : public Container
+    Type GetContents()
     {
-        IntegerContainer(int value) : m_IntContents(value) {}
-        ~IntegerContainer() { std::cout << "Destructing IntegerContainer" << std::endl; }
+        return m_Content;
+    }
 
-        int GetContents()
-        {
-            return m_IntContents;
-        }
-
-        void SetContents(float value) { m_IntContents = static_cast<int>(value); }
-
-        int m_IntContents;
-    };
-
-    class Shelf
+    template <typename T> void SetContents(T value)
     {
-    public:
+        m_Content = value;
+    }
 
-        Shelf(int size = NUMBER_OF_ITEMS_A_NORMAL_SHELF_CAN_HOLD) : m_ContentsSize(size)
-        {
-            m_Contents = new Container[size];
-        }
+  private:
+    Type m_Content;
+};
 
-        void AddContainer(const Container &c)
+class Accumulator
+{
+  public:
+    template <typename T> void operator()(T i)
+    {
+        ans += i;
+    }
+
+    float getAnswer()
+    {
+        return ans;
+    }
+
+  private:
+    float ans = 0.f;
+};
+
+class Shelf
+{
+  public:
+    Shelf(int size = NUMBER_OF_ITEMS_A_NORMAL_SHELF_CAN_HOLD) : m_Contents(size)
+    {
+    }
+
+    void AddContainer(Container c)
+    {
+        for (int i = 0; i < m_Contents.size(); i++)
         {
-            for (auto i = 0; i < m_ContentsSize;)
+            if (!m_Contents[i])
             {
-                if (!m_Contents[i])
-                {
-                    m_Contents[i] = const_cast<Container*>(&c);
-                    break;
-                }
+                m_Contents[i] = c;
+                break;
+            }
+        }
+    }
 
-                ++i;
+    float CalculateContainedSum()
+    {
+        Accumulator accumulator;
+
+        for (int i = 0; i < m_Contents.size(); i++)
+        {
+            if (m_Contents[i])
+            {
+                std::visit(accumulator, m_Contents[i]->GetContents());
             }
         }
 
-        float CalculateContainedSum()
-        {
-            float total = 0;
+        return accumulator.getAnswer();
+    }
 
-            for (auto i = 0; i < m_ContentsSize; ++i)
-            {
-                if (m_Contents[i])
-                {
-                    total += m_Contents[i]->GetContents();
-                }
-            }
-
-            return total;
-        }
-
-        int m_ContentsSize;
-        Container **m_Contents;
-    };
-
-
-}
-
+  private:
+    std::vector<std::optional<Container>> m_Contents;
+};
+} // namespace Kevin
